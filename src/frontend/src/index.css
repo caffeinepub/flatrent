@@ -1,0 +1,82 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* FlatRent palette — OKLCH raw L C H */
+    /* Primary: deep slate-blue #2F5E8B */
+    --primary: 0.42 0.085 234;
+    --primary-foreground: 0.985 0 0;
+
+    /* Background: very light gray #F5F7FA */
+    --background: 0.975 0.004 247;
+    --foreground: 0.145 0.008 264;
+
+    /* Card: white */
+    --card: 1 0 0;
+    --card-foreground: 0.145 0.008 264;
+
+    --popover: 1 0 0;
+    --popover-foreground: 0.145 0.008 264;
+
+    /* Secondary: muted blue-gray */
+    --secondary: 0.93 0.012 234;
+    --secondary-foreground: 0.42 0.085 234;
+
+    /* Muted */
+    --muted: 0.94 0.005 247;
+    --muted-foreground: 0.52 0.01 264;
+
+    /* Accent: lighter slate */
+    --accent: 0.88 0.025 234;
+    --accent-foreground: 0.32 0.085 234;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.88 0.008 247;
+    --input: 0.88 0.008 247;
+    --ring: 0.42 0.085 234;
+
+    /* Charts */
+    --chart-1: 0.42 0.085 234;
+    --chart-2: 0.6 0.118 184.704;
+    --chart-3: 0.398 0.07 227.392;
+    --chart-4: 0.828 0.189 84.429;
+    --chart-5: 0.769 0.188 70.08;
+
+    /* Sidebar */
+    --sidebar: 0.975 0.004 247;
+    --sidebar-foreground: 0.145 0.008 264;
+    --sidebar-primary: 0.42 0.085 234;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.93 0.012 234;
+    --sidebar-accent-foreground: 0.42 0.085 234;
+    --sidebar-border: 0.88 0.008 247;
+    --sidebar-ring: 0.42 0.085 234;
+
+    /* Custom tokens */
+    --navbar-bg: 0.42 0.085 234;
+    --footer-bg: 0.18 0 0;
+    --hero-overlay: 0.14 0.02 234;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: "Playfair Display", serif;
+  }
+}
