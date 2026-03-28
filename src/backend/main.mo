@@ -121,6 +121,14 @@ actor {
     ).sort(FlatListing.compareByPostedAt);
   };
 
+  // Admin access - get ALL listings including unavailable
+  public query ({ caller }) func getAllListings() : async [FlatListing] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all listings");
+    };
+    flatListings.values().toArray().sort(FlatListing.compareByPostedAt);
+  };
+
   type MarkUnavailableInput = {
     listingId : Nat;
     contactEmail : Text;
@@ -150,8 +158,50 @@ actor {
     };
     switch (flatListings.get(id)) {
       case (null) { Runtime.trap("Listing not found") };
-      case (?listing) {
+      case (?_) {
         flatListings.remove(id);
+      };
+    };
+  };
+
+  // Admin can update/edit a listing
+  public shared ({ caller }) func updateListing(id : Nat, input : FlatListingInput) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update listings");
+    };
+    switch (flatListings.get(id)) {
+      case (null) { Runtime.trap("Listing not found") };
+      case (?listing) {
+        let updatedListing : FlatListing = {
+          listing with
+          title = input.title;
+          location = input.location;
+          rentPrice = input.rentPrice;
+          bedrooms = input.bedrooms;
+          bathrooms = input.bathrooms;
+          description = input.description;
+          contactName = input.contactName;
+          contactPhone = input.contactPhone;
+          contactEmail = input.contactEmail;
+        };
+        flatListings.add(id, updatedListing);
+      };
+    };
+  };
+
+  // Admin can toggle availability of a listing
+  public shared ({ caller }) func toggleListingAvailability(id : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can toggle listing availability");
+    };
+    switch (flatListings.get(id)) {
+      case (null) { Runtime.trap("Listing not found") };
+      case (?listing) {
+        let updatedListing = {
+          listing with
+          isAvailable = not listing.isAvailable;
+        };
+        flatListings.add(id, updatedListing);
       };
     };
   };

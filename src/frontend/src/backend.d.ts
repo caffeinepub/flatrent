@@ -47,6 +47,7 @@ export enum UserRole {
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteListing(id: bigint): Promise<void>;
+    getAllListings(): Promise<Array<FlatListing>>;
     getAvailableListings(): Promise<Array<FlatListing>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -56,4 +57,6 @@ export interface backendInterface {
     markListingUnavailable(input: MarkUnavailableInput): Promise<void>;
     postListing(input: FlatListingInput): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    toggleListingAvailability(id: bigint): Promise<void>;
+    updateListing(id: bigint, input: FlatListingInput): Promise<void>;
 }

@@ -139,6 +139,9 @@ export interface backendInterface {
     markListingUnavailable(input: MarkUnavailableInput): Promise<void>;
     postListing(input: FlatListingInput): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    getAllListings(): Promise<Array<FlatListing>>;
+    toggleListingAvailability(id: bigint): Promise<void>;
+    updateListing(id: bigint, input: FlatListingInput): Promise<void>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -308,6 +311,48 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async getAllListings(): Promise<Array<FlatListing>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllListings();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllListings();
+            return result;
+        }
+    }
+    async toggleListingAvailability(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.toggleListingAvailability(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.toggleListingAvailability(arg0);
+            return result;
+        }
+    }
+    async updateListing(arg0: bigint, arg1: FlatListingInput): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateListing(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateListing(arg0, arg1);
             return result;
         }
     }
