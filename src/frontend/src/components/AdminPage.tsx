@@ -36,31 +36,46 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   } = useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const [setupDone, setSetupDone] = useState(false);
+  const [loginAttempted, setLoginAttempted] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const isLoggedIn = loginStatus === "success" && !!identity;
   const principal = identity?.getPrincipal().toString() ?? null;
 
+  const handleLogin = async () => {
+    setLoginAttempted(true);
+    setSetupError(null);
+    await login();
+  };
+
   // Check admin status + auto-assign if needed
-  const {
-    data: isAdmin,
-    isLoading: isCheckingAdmin,
-    error: adminError,
-  } = useQuery({
+  const { data: isAdmin, isLoading: isCheckingAdmin } = useQuery({
     queryKey: ["isAdmin", principal],
     queryFn: async () => {
       if (!actor || !identity) return false;
-      const admin = await actor.isCallerAdmin();
-      if (!admin && !setupDone) {
-        // Self-assign admin role on first visit
-        await actor.assignCallerUserRole(
-          identity.getPrincipal(),
-          UserRole.admin,
-        );
-        setSetupDone(true);
-        return true;
+      try {
+        const admin = await actor.isCallerAdmin();
+        if (admin) return true;
+        // Try to self-assign admin role (works if authorization allows it for new users)
+        try {
+          await actor.assignCallerUserRole(
+            identity.getPrincipal(),
+            UserRole.admin,
+          );
+          return true;
+        } catch {
+          // assignCallerUserRole requires existing admin -- use getCallerUserRole to check current role
+          const role = await actor.getCallerUserRole();
+          if (role === UserRole.admin) return true;
+          setSetupError(
+            "Could not set up admin access. Please contact support.",
+          );
+          return false;
+        }
+      } catch {
+        setSetupError("Failed to verify admin status. Please try again.");
+        return false;
       }
-      return admin;
     },
     enabled: !!actor && isLoggedIn,
     retry: false,
@@ -156,7 +171,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
               <CardContent>
                 <Button
                   className="w-full"
-                  onClick={login}
+                  onClick={handleLogin}
                   disabled={isLoggingIn}
                   data-ocid="admin.login_button"
                 >
@@ -169,7 +184,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     ? "Signing in..."
                     : "Sign in with Internet Identity"}
                 </Button>
-                {isLoginError && (
+                {loginAttempted && isLoginError && (
                   <p
                     className="text-destructive text-xs mt-3"
                     data-ocid="admin.login.error_state"
@@ -192,28 +207,29 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
         )}
 
         {/* Logged in — checking admin */}
-        {isLoggedIn && (isCheckingAdmin || isAdmin === undefined) && (
+        {isLoggedIn && isCheckingAdmin && (
           <div
             className="flex flex-col items-center justify-center min-h-[50vh] gap-3"
             data-ocid="admin.checking_state"
           >
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground text-sm">
-              {setupDone
-                ? "Setting up admin access..."
-                : "Verifying credentials..."}
+              Setting up admin access...
             </p>
           </div>
         )}
 
-        {adminError && (
+        {setupError && !isCheckingAdmin && (
           <div
             className="flex flex-col items-center justify-center min-h-[50vh]"
             data-ocid="admin.error_state"
           >
-            <p className="text-destructive">
-              Failed to verify admin status. Please try again.
+            <p className="text-destructive text-center max-w-sm">
+              {setupError}
             </p>
+            <Button variant="outline" className="mt-4" onClick={clear}>
+              Try Again
+            </Button>
           </div>
         )}
 

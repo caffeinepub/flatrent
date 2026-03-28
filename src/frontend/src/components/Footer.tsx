@@ -9,9 +9,10 @@ const SOCIAL = [
 
 interface FooterProps {
   onAdminClick?: () => void;
+  onAboutClick?: () => void;
 }
 
-export default function Footer({ onAdminClick }: FooterProps) {
+export default function Footer({ onAdminClick, onAboutClick }: FooterProps) {
   const year = new Date().getFullYear();
   const utm = encodeURIComponent(window.location.hostname);
 
@@ -90,7 +91,17 @@ export default function Footer({ onAdminClick }: FooterProps) {
             </h4>
             <ul className="space-y-2 text-sm text-white/60">
               <li>
-                <span className="cursor-default">About Us</span>
+                {onAboutClick ? (
+                  <button
+                    type="button"
+                    onClick={onAboutClick}
+                    className="hover:text-white transition-colors text-left"
+                  >
+                    About Us
+                  </button>
+                ) : (
+                  <span className="cursor-default">About Us</span>
+                )}
               </li>
               <li>
                 <span className="cursor-default">Privacy Policy</span>

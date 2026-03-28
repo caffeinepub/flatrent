@@ -150,7 +150,10 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <AdminPage onBack={() => setPage("home")} />
-        <Footer onAdminClick={() => setPage("admin")} />
+        <Footer
+          onAdminClick={() => setPage("admin")}
+          onAboutClick={() => setPage("about")}
+        />
         <Toaster />
       </div>
     );
@@ -166,7 +169,10 @@ function AppContent() {
           onAdmin={() => setPage("admin")}
         />
         <AboutPage onClose={() => setPage("home")} />
-        <Footer onAdminClick={() => setPage("admin")} />
+        <Footer
+          onAdminClick={() => setPage("admin")}
+          onAboutClick={() => setPage("about")}
+        />
         <PostFlatModal
           open={postModalOpen}
           onClose={() => setPostModalOpen(false)}
@@ -279,7 +285,10 @@ function AppContent() {
         <WhyChooseSection />
       </main>
 
-      <Footer onAdminClick={() => setPage("admin")} />
+      <Footer
+        onAdminClick={() => setPage("admin")}
+        onAboutClick={() => setPage("about")}
+      />
 
       <ListingModal
         listing={selectedListing}
