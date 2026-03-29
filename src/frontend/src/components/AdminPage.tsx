@@ -71,15 +71,8 @@ function listingToForm(listing: FlatListing): EditForm {
 }
 
 export default function AdminPage({ onBack }: { onBack: () => void }) {
-  const {
-    login,
-    clear,
-    loginStatus,
-    identity,
-    isInitializing,
-    isLoggingIn,
-    isLoginError,
-  } = useInternetIdentity();
+  const { login, clear, identity, isInitializing, isLoggingIn, isLoginError } =
+    useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();
   const [loginAttempted, setLoginAttempted] = useState(false);
@@ -87,7 +80,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   const [editListing, setEditListing] = useState<FlatListing | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
 
-  const isLoggedIn = loginStatus === "success" && !!identity;
+  const isLoggedIn = !!identity;
   const principal = identity?.getPrincipal().toString() ?? null;
 
   const handleLogin = async () => {
