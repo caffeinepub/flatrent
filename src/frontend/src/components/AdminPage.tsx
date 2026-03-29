@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -32,6 +33,7 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  RefreshCw,
   Shield,
   Trash2,
   XCircle,
@@ -131,13 +133,23 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   });
 
   // Fetch all listings (including unavailable) for admin
-  const { data: listings = [], isLoading: listingsLoading } = useQuery({
-    queryKey: ["admin-listings"],
+  // FIX: key includes principal so it's never stale from anonymous sessions
+  // FIX: only enabled after isAdmin is confirmed true
+  const {
+    data: listings = [],
+    isLoading: listingsLoading,
+    refetch: refetchListings,
+    isFetching: isRefetching,
+  } = useQuery({
+    queryKey: ["admin-listings", principal],
     queryFn: async () => {
       if (!actor) return [];
       return actor.getAllListings();
     },
-    enabled: !!actor && isAdmin === true,
+    enabled: !!actor && isLoggedIn && isAdmin === true,
+    staleTime: 0,
+    refetchOnMount: true,
+    retry: 2,
   });
 
   const availableCount = listings.filter((l) => l.isAvailable).length;
@@ -150,7 +162,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
       await actor.deleteListing(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-listings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-listings", principal],
+      });
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       toast.success("Listing deleted");
     },
@@ -164,7 +178,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
       await actor.toggleListingAvailability(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-listings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-listings", principal],
+      });
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       toast.success("Availability updated");
     },
@@ -188,7 +204,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-listings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-listings", principal],
+      });
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       toast.success("Listing updated successfully");
       closeEdit();
@@ -204,7 +222,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   return (
     <main className="flex-1 bg-background min-h-screen">
       {/* Admin Header */}
-      <div className="bg-navbar text-white py-4 px-6">
+      <div className="bg-navbar text-white py-4 px-6 shadow-md">
         <div className="container mx-auto flex items-center justify-between">
           <button
             type="button"
@@ -213,7 +231,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
             data-ocid="admin.back_button"
           >
             <Home className="h-4 w-4" />
-            <span className="text-sm">Back to FlatRent</span>
+            <span className="text-sm font-medium">Back to FlatRent</span>
           </button>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
@@ -358,41 +376,64 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
               </CardContent>
             </Card>
 
-            {/* Stats cards */}
-            {!listingsLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-5 pb-5">
-                    <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
-                      Total Listings
-                    </p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {listings.length}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-5 pb-5">
-                    <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
-                      Available
-                    </p>
-                    <p className="text-3xl font-bold text-green-600">
-                      {availableCount}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-5 pb-5">
-                    <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
-                      Unavailable
-                    </p>
-                    <p className="text-3xl font-bold text-muted-foreground">
-                      {unavailableCount}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            {/* Stats cards — skeleton while loading */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {listingsLoading ? (
+                <>
+                  <Card>
+                    <CardContent className="pt-5 pb-5">
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-8 w-12" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5 pb-5">
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-8 w-12" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5 pb-5">
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-8 w-12" />
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <>
+                  <Card className="border-l-4 border-l-primary">
+                    <CardContent className="pt-5 pb-5">
+                      <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1 font-medium">
+                        Total Listings
+                      </p>
+                      <p className="text-3xl font-bold text-foreground">
+                        {listings.length}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-green-500">
+                    <CardContent className="pt-5 pb-5">
+                      <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1 font-medium">
+                        Available
+                      </p>
+                      <p className="text-3xl font-bold text-green-600">
+                        {availableCount}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-orange-400">
+                    <CardContent className="pt-5 pb-5">
+                      <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1 font-medium">
+                        Unavailable
+                      </p>
+                      <p className="text-3xl font-bold text-muted-foreground">
+                        {unavailableCount}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
 
             {/* Listings table */}
             <Card>
@@ -406,7 +447,21 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                       Manage all property listings on FlatRent
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary">{listings.length} total</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{listings.length} total</Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refetchListings()}
+                      disabled={isRefetching}
+                      data-ocid="admin.listings.refresh_button"
+                    >
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 mr-1 ${isRefetching ? "animate-spin" : ""}`}
+                      />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -419,10 +474,14 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   </div>
                 ) : listings.length === 0 ? (
                   <div
-                    className="text-center py-12 text-muted-foreground"
+                    className="text-center py-16 text-muted-foreground"
                     data-ocid="admin.listings.empty_state"
                   >
-                    No listings found.
+                    <Shield className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="font-medium">No listings found</p>
+                    <p className="text-sm mt-1">
+                      Post a listing from the home page to see it here.
+                    </p>
                   </div>
                 ) : (
                   <div
@@ -431,20 +490,31 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   >
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Price / mo</TableHead>
-                          <TableHead>Beds</TableHead>
-                          <TableHead>Contact</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                        <TableRow className="bg-muted/40">
+                          <TableHead className="font-semibold">Title</TableHead>
+                          <TableHead className="font-semibold">
+                            Location
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Price / mo
+                          </TableHead>
+                          <TableHead className="font-semibold">Beds</TableHead>
+                          <TableHead className="font-semibold">
+                            Contact
+                          </TableHead>
+                          <TableHead className="font-semibold">
+                            Status
+                          </TableHead>
+                          <TableHead className="text-right font-semibold">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {listings.map((listing, i) => (
                           <TableRow
                             key={String(listing.id)}
+                            className="hover:bg-muted/30 transition-colors"
                             data-ocid={`admin.listings.row.${i + 1}`}
                           >
                             <TableCell className="font-medium max-w-[150px] truncate">
@@ -460,7 +530,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                               {String(listing.bedrooms)} BHK
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              <div>{listing.contactName}</div>
+                              <div className="font-medium text-foreground">
+                                {listing.contactName}
+                              </div>
                               <div>{listing.contactPhone}</div>
                             </TableCell>
                             <TableCell>
@@ -470,8 +542,8 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                                 }
                                 className={
                                   listing.isAvailable
-                                    ? "bg-green-100 text-green-700 hover:bg-green-100"
-                                    : ""
+                                    ? "bg-green-100 text-green-700 hover:bg-green-100 border border-green-200"
+                                    : "border"
                                 }
                               >
                                 {listing.isAvailable
@@ -664,10 +736,15 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   variant="outline"
                   onClick={closeEdit}
                   disabled={isUpdating}
+                  data-ocid="admin.edit.cancel_button"
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleEditSubmit} disabled={isUpdating}>
+                <Button
+                  onClick={handleEditSubmit}
+                  disabled={isUpdating}
+                  data-ocid="admin.edit.save_button"
+                >
                   {isUpdating ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : null}
