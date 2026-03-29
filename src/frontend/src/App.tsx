@@ -1,9 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toaster } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 
 import AboutPage from "./components/AboutPage";
 import AdminPage from "./components/AdminPage";
@@ -19,8 +18,6 @@ import WhyChooseSection from "./components/WhyChooseSection";
 
 import type { FlatListing } from "./backend.d";
 import { useGetListings, usePostListing } from "./hooks/useQueries";
-
-const queryClient = new QueryClient();
 
 const SAMPLE_LISTINGS = [
   {
@@ -79,6 +76,59 @@ const SAMPLE_LISTINGS = [
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4"];
 
+// ---------------------------------------------------------------------------
+// Error Boundary
+// ---------------------------------------------------------------------------
+interface ErrorBoundaryState {
+  hasError: boolean;
+  message: string;
+}
+
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-8">
+          <div className="max-w-md text-center space-y-4">
+            <h1 className="text-2xl font-bold text-destructive">
+              Something went wrong
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {this.state.message}
+            </p>
+            <button
+              type="button"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              onClick={() => window.location.reload()}
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// App content
+// ---------------------------------------------------------------------------
 function AppContent() {
   const { data: listings = [], isLoading } = useGetListings();
   const { mutateAsync: postListing } = usePostListing();
@@ -315,8 +365,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <AppErrorBoundary>
       <AppContent />
-    </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
