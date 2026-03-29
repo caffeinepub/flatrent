@@ -13,6 +13,7 @@ import LandlordCTA from "./components/LandlordCTA";
 import ListingCard from "./components/ListingCard";
 import ListingModal from "./components/ListingModal";
 import Navbar from "./components/Navbar";
+import PositivePostersSection from "./components/PositivePostersSection";
 import PostFlatModal from "./components/PostFlatModal";
 import WhyChooseSection from "./components/WhyChooseSection";
 
@@ -285,6 +286,7 @@ function AppContent() {
           </div>
         </section>
 
+        <PositivePostersSection />
         <LandlordCTA onPostFlat={() => setPostModalOpen(true)} />
         <WhyChooseSection />
       </main>
