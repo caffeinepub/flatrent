@@ -1,29 +1,33 @@
+import { ArrowRight, Home, Shield, Zap } from "lucide-react";
 import { motion } from "motion/react";
 
-const posters = [
+const benefits = [
   {
-    image: "/assets/generated/poster-rent-freedom.dim_800x600.jpg",
-    headline: "RENT IS FREEDOM!",
-    sub: "No maintenance stress. No huge loan. Just live, enjoy, and thrive!",
-    accent: "from-yellow-400 to-orange-400",
+    icon: Home,
+    headline: "Rent with Confidence",
+    sub: "Browse verified listings with real photos and direct owner contact. No middlemen, no hidden fees.",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
   },
   {
-    image: "/assets/generated/poster-dream-home.dim_800x600.jpg",
-    headline: "YOUR DREAM HOME AWAITS!",
-    sub: "The perfect flat is just one search away. Find your happy place today!",
-    accent: "from-blue-400 to-green-400",
+    icon: Zap,
+    headline: "Quick & Easy Search",
+    sub: "Filter by location, budget, and size to find the right flat in minutes. Moving made simple.",
+    color: "text-green-600",
+    bg: "bg-green-50",
   },
   {
-    image: "/assets/generated/poster-best-life.dim_800x600.jpg",
-    headline: "RENTING = BEST LIFE!",
-    sub: "Flexibility, convenience, and zero headaches. Renting is smart living!",
-    accent: "from-purple-400 to-pink-400",
+    icon: Shield,
+    headline: "Trusted by Thousands",
+    sub: "Owners and tenants across India rely on FlatRent for safe, transparent property transactions.",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
   },
 ];
 
 export default function PositivePostersSection() {
   return (
-    <section className="py-16 bg-gradient-to-br from-yellow-50 via-orange-50 to-pink-50">
+    <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -32,79 +36,71 @@ export default function PositivePostersSection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <span className="inline-block bg-orange-100 text-orange-600 font-bold text-sm px-4 py-1 rounded-full mb-3 uppercase tracking-widest">
-            🌟 Positive Vibes Only
+          <span className="inline-block bg-blue-100 text-blue-700 font-semibold text-xs px-4 py-1.5 rounded-full mb-3 uppercase tracking-widest">
+            Why Choose FlatRent
           </span>
-          <h2 className="text-4xl font-extrabold text-gray-800 mb-3">
-            Why Renting is Awesome!
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+            A Smarter Way to Rent
           </h2>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">
-            Renting gives you freedom, flexibility, and the life you deserve.
-            Here's why renters are winning! 🎉
+            We connect property owners and tenants directly — saving you time,
+            money, and hassle.
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {posters.map((poster, i) => (
+          {benefits.map((item, i) => (
             <motion.div
-              key={poster.headline}
+              key={item.headline}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.12 }}
-              whileHover={{ scale: 1.03 }}
-              className="rounded-2xl overflow-hidden shadow-lg bg-white"
+              className="rounded-2xl bg-white shadow-sm border border-gray-100 p-8 flex flex-col gap-4 hover:shadow-md transition-shadow"
             >
-              <div className="relative">
-                <img
-                  src={poster.image}
-                  alt={poster.headline}
-                  className="w-full h-52 object-cover"
-                />
-                <div
-                  className={`absolute inset-0 bg-gradient-to-t ${poster.accent} opacity-20`}
-                />
+              <div
+                className={`w-12 h-12 rounded-xl ${item.bg} flex items-center justify-center`}
+              >
+                <item.icon className={`h-6 w-6 ${item.color}`} />
               </div>
-              <div className="p-5">
-                <h3
-                  className={`text-xl font-extrabold bg-gradient-to-r ${poster.accent} bg-clip-text text-transparent mb-2`}
-                >
-                  {poster.headline}
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {poster.sub}
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                {item.headline}
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                {item.sub}
+              </p>
             </motion.div>
           ))}
         </div>
 
-        {/* Big positive banner */}
+        {/* CTA Banner */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.97 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-12 rounded-3xl bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500 p-10 text-center text-white shadow-2xl"
+          className="mt-12 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 p-10 text-center text-white shadow-lg"
         >
-          <div className="text-5xl mb-3">🏠✨</div>
-          <h3 className="text-3xl md:text-4xl font-extrabold mb-3">
-            RENT IS NOT A WASTE — IT'S A LIFESTYLE!
+          <h3 className="text-2xl md:text-3xl font-bold mb-3">
+            Ready to Find Your Next Home?
           </h3>
-          <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
-            You're not throwing money away. You're buying freedom, flexibility,
-            zero maintenance stress, and the ability to live anywhere you want.
-            That's priceless! 💪
+          <p className="text-lg opacity-90 max-w-2xl mx-auto mb-6">
+            Post your flat for free or browse thousands of listings across
+            India. It takes less than 2 minutes.
           </p>
-          <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm font-bold">
+          <div className="flex flex-wrap justify-center gap-6 text-sm font-medium">
             {[
-              "✅ No Heavy Loans",
-              "✅ Move Anytime",
-              "✅ Zero Repair Bills",
-              "✅ Upgrade Your Home Easily",
-              "✅ Live Where You Love",
+              "No Brokerage",
+              "Verified Listings",
+              "Direct Contact",
+              "Free to Post",
+              "All of India",
             ].map((item) => (
-              <span key={item} className="bg-white/20 rounded-full px-4 py-1.5">
+              <span
+                key={item}
+                className="flex items-center gap-1.5 bg-white/15 rounded-full px-4 py-1.5"
+              >
+                <ArrowRight className="h-3.5 w-3.5" />
                 {item}
               </span>
             ))}
