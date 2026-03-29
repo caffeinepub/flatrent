@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -30,21 +31,24 @@ import {
   CheckCircle,
   Edit2,
   Home,
+  ImagePlus,
   Loader2,
   LogIn,
   LogOut,
   RefreshCw,
   Shield,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { FlatListing } from "../backend.d";
 import { UserRole } from "../backend.d";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useStorageClient } from "../hooks/useStorageClient";
 
 type EditForm = {
   title: string;
@@ -72,15 +76,26 @@ function listingToForm(listing: FlatListing): EditForm {
   };
 }
 
+interface PhotoFile {
+  file: File;
+  preview: string;
+}
+
 export default function AdminPage({ onBack }: { onBack: () => void }) {
   const { login, clear, identity, isInitializing, isLoggingIn, isLoginError } =
     useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();
+  const storageClient = useStorageClient();
   const [loginAttempted, setLoginAttempted] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [editListing, setEditListing] = useState<FlatListing | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editImageHashes, setEditImageHashes] = useState<string[]>([]);
+  const [editNewPhotos, setEditNewPhotos] = useState<PhotoFile[]>([]);
+  const [editUploadProgress, setEditUploadProgress] = useState(0);
+  const [isEditUploading, setIsEditUploading] = useState(false);
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   const isLoggedIn = !!identity;
   const principal = identity?.getPrincipal().toString() ?? null;
@@ -94,15 +109,49 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   const openEdit = (listing: FlatListing) => {
     setEditListing(listing);
     setEditForm(listingToForm(listing));
+    setEditImageHashes([...listing.imageHashes]);
+    setEditNewPhotos([]);
+    setEditUploadProgress(0);
   };
 
   const closeEdit = () => {
+    for (const p of editNewPhotos) URL.revokeObjectURL(p.preview);
     setEditListing(null);
     setEditForm(null);
+    setEditImageHashes([]);
+    setEditNewPhotos([]);
+    setEditUploadProgress(0);
+    setIsEditUploading(false);
+  };
+
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const remaining = 5 - editImageHashes.length - editNewPhotos.length;
+    const toAdd = files.slice(0, remaining);
+    const valid = toAdd.filter((f) => f.size <= 5 * 1024 * 1024);
+    if (valid.length < toAdd.length)
+      toast.error("Each photo must be under 5MB");
+    const newPhotos: PhotoFile[] = valid.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setEditNewPhotos((prev) => [...prev, ...newPhotos]);
+    if (editFileRef.current) editFileRef.current.value = "";
+  };
+
+  const removeExistingHash = (index: number) => {
+    setEditImageHashes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewPhoto = (index: number) => {
+    setEditNewPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   // Check admin status + auto-assign if needed
-  const { data: isAdmin, isLoading: isCheckingAdmin } = useQuery({
+  const { data: isAdmin, isLoading: isCheckingAdmin } = useQuery<boolean>({
     queryKey: ["isAdmin", principal],
     queryFn: async () => {
       if (!actor || !identity) return false;
@@ -132,21 +181,19 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
     retry: false,
   });
 
-  // Fetch all listings (including unavailable) for admin
-  // FIX: key includes principal so it's never stale from anonymous sessions
-  // FIX: only enabled after isAdmin is confirmed true
+  // Fetch all listings
   const {
     data: listings = [],
     isLoading: listingsLoading,
     refetch: refetchListings,
     isFetching: isRefetching,
-  } = useQuery({
+  } = useQuery<FlatListing[]>({
     queryKey: ["admin-listings", principal],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllListings();
+      return actor.getAllListings() as unknown as Promise<FlatListing[]>;
     },
-    enabled: !!actor && isLoggedIn && isAdmin === true,
+    enabled: !!actor && isLoggedIn,
     staleTime: 0,
     refetchOnMount: true,
     retry: 2,
@@ -189,9 +236,18 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
 
   // Update listing mutation
   const { mutate: updateListing, isPending: isUpdating } = useMutation({
-    mutationFn: async ({ id, form }: { id: bigint; form: EditForm }) => {
+    mutationFn: async ({
+      id,
+      form,
+      hashes,
+    }: { id: bigint; form: EditForm; hashes: string[] }) => {
       if (!actor) throw new Error("Actor not ready");
-      await actor.updateListing(id, {
+      await (
+        actor.updateListing as unknown as (
+          id: bigint,
+          input: Record<string, unknown>,
+        ) => Promise<void>
+      )(id, {
         title: form.title,
         location: form.location,
         rentPrice: BigInt(form.rentPrice || "0"),
@@ -201,6 +257,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
         contactName: form.contactName,
         contactPhone: form.contactPhone,
         contactEmail: form.contactEmail,
+        imageHashes: hashes,
       });
     },
     onSuccess: () => {
@@ -214,9 +271,35 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
     onError: () => toast.error("Failed to update listing"),
   });
 
-  const handleEditSubmit = () => {
+  const handleEditSubmit = async () => {
     if (!editListing || !editForm) return;
-    updateListing({ id: editListing.id, form: editForm });
+    let finalHashes = [...editImageHashes];
+
+    if (editNewPhotos.length > 0 && storageClient) {
+      setIsEditUploading(true);
+      setEditUploadProgress(0);
+      const total = editNewPhotos.length;
+      let done = 0;
+      try {
+        const newHashes = await Promise.all(
+          editNewPhotos.map(async (p) => {
+            const bytes = new Uint8Array(await p.file.arrayBuffer());
+            const { hash } = await storageClient.putFile(bytes, () => {});
+            done++;
+            setEditUploadProgress(Math.round((done / total) * 100));
+            return hash;
+          }),
+        );
+        finalHashes = [...finalHashes, ...newHashes];
+      } catch {
+        toast.error("Failed to upload photos");
+        setIsEditUploading(false);
+        return;
+      }
+      setIsEditUploading(false);
+    }
+
+    updateListing({ id: editListing.id, form: editForm, hashes: finalHashes });
   };
 
   return (
@@ -317,34 +400,22 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
-        {isLoggedIn && isCheckingAdmin && (
-          <div
-            className="flex flex-col items-center justify-center min-h-[50vh] gap-3"
-            data-ocid="admin.checking_state"
-          >
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground text-sm">
-              Setting up admin access...
-            </p>
-          </div>
-        )}
-
         {setupError && !isCheckingAdmin && (
           <div
-            className="flex flex-col items-center justify-center min-h-[50vh]"
+            className="flex flex-col items-center justify-center gap-3 mb-4 p-4 bg-destructive/10 rounded-lg"
             data-ocid="admin.error_state"
           >
-            <p className="text-destructive text-center max-w-sm">
+            <p className="text-destructive text-center max-w-sm text-sm">
               {setupError}
             </p>
-            <Button variant="outline" className="mt-4" onClick={clear}>
+            <Button variant="outline" size="sm" onClick={clear}>
               Try Again
             </Button>
           </div>
         )}
 
         {/* Admin dashboard */}
-        {isLoggedIn && isAdmin === true && (
+        {isLoggedIn && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -367,37 +438,34 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     </p>
                   </div>
                 </div>
-                <Badge
-                  variant="default"
-                  className="bg-primary text-primary-foreground self-start sm:self-auto"
-                >
-                  Administrator
-                </Badge>
+                {isCheckingAdmin ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Verifying admin...
+                  </div>
+                ) : (
+                  <Badge
+                    variant="default"
+                    className="bg-primary text-primary-foreground self-start sm:self-auto"
+                  >
+                    {isAdmin ? "Administrator" : "Viewer"}
+                  </Badge>
+                )}
               </CardContent>
             </Card>
 
-            {/* Stats cards — skeleton while loading */}
+            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {listingsLoading ? (
                 <>
-                  <Card>
-                    <CardContent className="pt-5 pb-5">
-                      <Skeleton className="h-4 w-24 mb-2" />
-                      <Skeleton className="h-8 w-12" />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-5 pb-5">
-                      <Skeleton className="h-4 w-24 mb-2" />
-                      <Skeleton className="h-8 w-12" />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-5 pb-5">
-                      <Skeleton className="h-4 w-24 mb-2" />
-                      <Skeleton className="h-8 w-12" />
-                    </CardContent>
-                  </Card>
+                  {[1, 2, 3].map((n) => (
+                    <Card key={n}>
+                      <CardContent className="pt-5 pb-5">
+                        <Skeleton className="h-4 w-24 mb-2" />
+                        <Skeleton className="h-8 w-12" />
+                      </CardContent>
+                    </Card>
+                  ))}
                 </>
               ) : (
                 <>
@@ -457,7 +525,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                       data-ocid="admin.listings.refresh_button"
                     >
                       <RefreshCw
-                        className={`h-3.5 w-3.5 mr-1 ${isRefetching ? "animate-spin" : ""}`}
+                        className={`h-3.5 w-3.5 mr-1 ${
+                          isRefetching ? "animate-spin" : ""
+                        }`}
                       />
                       Refresh
                     </Button>
@@ -556,13 +626,8 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  disabled={isToggling}
+                                  disabled={!isAdmin || isToggling}
                                   onClick={() => toggleAvailability(listing.id)}
-                                  title={
-                                    listing.isAvailable
-                                      ? "Mark Unavailable"
-                                      : "Mark Available"
-                                  }
                                   data-ocid={`admin.listings.toggle_button.${i + 1}`}
                                 >
                                   {listing.isAvailable ? (
@@ -574,6 +639,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  disabled={!isAdmin}
                                   onClick={() => openEdit(listing)}
                                   data-ocid={`admin.listings.edit_button.${i + 1}`}
                                 >
@@ -582,7 +648,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  disabled={isDeleting}
+                                  disabled={!isAdmin || isDeleting}
                                   onClick={() => deleteListing(listing.id)}
                                   data-ocid={`admin.listings.delete_button.${i + 1}`}
                                 >
@@ -730,25 +796,115 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Photo management */}
+                <div className="border-t pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Photos
+                    </p>
+                    {editImageHashes.length + editNewPhotos.length < 5 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => editFileRef.current?.click()}
+                        data-ocid="admin.edit.upload_button"
+                      >
+                        <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                        Add Photos
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    ref={editFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={handleEditFileSelect}
+                  />
+
+                  {editImageHashes.length === 0 &&
+                  editNewPhotos.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => editFileRef.current?.click()}
+                      className="w-full flex flex-col items-center gap-1 py-4 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border-0"
+                      data-ocid="admin.edit.dropzone"
+                    >
+                      <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        No photos — click to add
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {editImageHashes.map((hash, i) => (
+                        <ExistingHashThumb
+                          key={hash}
+                          hash={hash}
+                          onRemove={() => removeExistingHash(i)}
+                        />
+                      ))}
+                      {editNewPhotos.map((p, i) => (
+                        <div
+                          key={p.preview}
+                          className="relative aspect-square rounded-lg overflow-hidden group"
+                        >
+                          <img
+                            src={p.preview}
+                            alt={`New flat view ${i + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewPhoto(i)}
+                            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                          <span className="absolute bottom-1 left-1 text-xs bg-blue-500 text-white px-1 rounded">
+                            New
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isEditUploading && (
+                    <div
+                      className="mt-2 space-y-1"
+                      data-ocid="admin.edit.loading_state"
+                    >
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Uploading photos...</span>
+                        <span>{editUploadProgress}%</span>
+                      </div>
+                      <Progress value={editUploadProgress} className="h-1.5" />
+                    </div>
+                  )}
+                </div>
               </div>
+
               <div className="flex gap-2 justify-end pt-2">
                 <Button
                   variant="outline"
                   onClick={closeEdit}
-                  disabled={isUpdating}
+                  disabled={isUpdating || isEditUploading}
                   data-ocid="admin.edit.cancel_button"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleEditSubmit}
-                  disabled={isUpdating}
+                  disabled={isUpdating || isEditUploading}
                   data-ocid="admin.edit.save_button"
                 >
-                  {isUpdating ? (
+                  {isUpdating || isEditUploading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : null}
-                  Save Changes
+                  {isEditUploading ? "Uploading..." : "Save Changes"}
                 </Button>
               </div>
             </div>
@@ -756,5 +912,43 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
         </DialogContent>
       </Dialog>
     </main>
+  );
+}
+
+// Small component to show an existing image hash as a thumbnail
+function ExistingHashThumb({
+  hash,
+  onRemove,
+}: {
+  hash: string;
+  onRemove: () => void;
+}) {
+  const storageClient = useStorageClient();
+  const [url, setUrl] = useState<string | null>(null);
+
+  useState(() => {
+    if (storageClient) {
+      storageClient
+        .getDirectURL(hash)
+        .then(setUrl)
+        .catch(() => {});
+    }
+  });
+
+  return (
+    <div className="relative aspect-square rounded-lg overflow-hidden group bg-muted">
+      {url ? (
+        <img src={url} alt="Flat view" className="w-full h-full object-cover" />
+      ) : (
+        <Skeleton className="w-full h-full rounded-none" />
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X className="h-3 w-3 text-white" />
+      </button>
+    </div>
   );
 }

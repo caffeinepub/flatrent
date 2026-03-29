@@ -33,6 +33,7 @@ const SAMPLE_LISTINGS = [
     contactName: "Rajesh Sharma",
     contactPhone: "+91 98765 43210",
     contactEmail: "rajesh.sharma@email.com",
+    imageHashes: [],
   },
   {
     title: "Cozy 1BHK Studio in Koramangala",
@@ -45,6 +46,7 @@ const SAMPLE_LISTINGS = [
     contactName: "Priya Nair",
     contactPhone: "+91 99887 76655",
     contactEmail: "priya.nair@email.com",
+    imageHashes: [],
   },
   {
     title: "Modern 3BHK with Sea View",
@@ -57,6 +59,7 @@ const SAMPLE_LISTINGS = [
     contactName: "Arjun Mehta",
     contactPhone: "+91 77665 54433",
     contactEmail: "arjun.mehta@email.com",
+    imageHashes: [],
   },
   {
     title: "Affordable 1BHK in Whitefield",
@@ -69,6 +72,7 @@ const SAMPLE_LISTINGS = [
     contactName: "Sneha Patel",
     contactPhone: "+91 88776 65544",
     contactEmail: "sneha.patel@email.com",
+    imageHashes: [],
   },
 ];
 
@@ -268,7 +272,7 @@ function AppContent() {
                       transition={{ duration: 0.4, delay: i * 0.07 }}
                     >
                       <ListingCard
-                        listing={listing}
+                        listing={listing as FlatListing}
                         index={i}
                         onViewDetails={handleViewDetails}
                         onContact={handleContact}

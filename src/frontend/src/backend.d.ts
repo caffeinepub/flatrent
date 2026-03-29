@@ -20,6 +20,7 @@ export interface FlatListing {
     bathrooms: bigint;
     location: string;
     contactPhone: string;
+    imageHashes: Array<string>;
 }
 export interface FlatListingInput {
     title: string;
@@ -31,6 +32,7 @@ export interface FlatListingInput {
     bathrooms: bigint;
     location: string;
     contactPhone: string;
+    imageHashes: Array<string>;
 }
 export interface UserProfile {
     name: string;

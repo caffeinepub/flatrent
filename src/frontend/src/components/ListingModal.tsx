@@ -6,17 +6,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bath,
   Bed,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   IndianRupee,
   Mail,
   MapPin,
   Phone,
   User,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { FlatListing } from "../backend.d";
+import { useStorageClient } from "../hooks/useStorageClient";
 import { getListingImage } from "./ListingCard";
 
 interface ListingModalProps {
@@ -31,9 +36,37 @@ export default function ListingModal({
   open,
   onClose,
 }: ListingModalProps) {
+  const storageClient = useStorageClient();
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!listing) return;
+    if (listing.imageHashes.length > 0 && storageClient) {
+      setImagesLoading(true);
+      Promise.all(listing.imageHashes.map((h) => storageClient.getDirectURL(h)))
+        .then((urls) => {
+          setImageUrls(urls);
+          setActiveIndex(0);
+          setImagesLoading(false);
+        })
+        .catch(() => {
+          setImageUrls([]);
+          setImagesLoading(false);
+        });
+    } else {
+      setImageUrls([]);
+      setImagesLoading(false);
+    }
+  }, [listing, storageClient]);
+
   if (!listing) return null;
 
-  const imgUrl = getListingImage(listing.id);
+  const fallbackImg = getListingImage(listing.id);
+  const hasRealImages = imageUrls.length > 0;
+  const displayImg = hasRealImages ? imageUrls[activeIndex] : fallbackImg;
+
   const postedDate = new Date(
     Number(listing.postedAt) / 1_000_000,
   ).toLocaleDateString("en-IN", {
@@ -48,17 +81,66 @@ export default function ListingModal({
         className="max-w-2xl p-0 overflow-hidden"
         data-ocid="listing.dialog"
       >
-        {/* Hero image */}
-        <div className="relative h-56 overflow-hidden">
-          <img
-            src={imgUrl}
-            alt={listing.title}
-            className="w-full h-full object-cover"
-          />
+        {/* Hero image / gallery */}
+        <div className="relative h-56 overflow-hidden bg-muted">
+          {imagesLoading ? (
+            <Skeleton className="w-full h-full rounded-none" />
+          ) : (
+            <img
+              src={displayImg}
+              alt={listing.title}
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
             Available
           </Badge>
+
+          {/* Gallery navigation */}
+          {hasRealImages && imageUrls.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveIndex((i) =>
+                    i === 0 ? imageUrls.length - 1 : i - 1,
+                  )
+                }
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveIndex((i) => (i + 1) % imageUrls.length)
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {imageUrls.map((url, i) => (
+                  <button
+                    key={url}
+                    type="button"
+                    onClick={() => setActiveIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === activeIndex
+                        ? "w-4 bg-white"
+                        : "w-1.5 bg-white/50 hover:bg-white/80"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Thumbnail strip */}
+          {hasRealImages && imageUrls.length > 1 && (
+            <div className="absolute bottom-0 left-0 right-0 flex gap-1 px-3 pb-3 justify-center" />
+          )}
         </div>
 
         <div className="p-6 space-y-5">

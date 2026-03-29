@@ -1,7 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Bath, Bed, Eye, IndianRupee, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { FlatListing } from "../backend.d";
+import { useStorageClient } from "../hooks/useStorageClient";
 
 const FLAT_IMAGES = [
   "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
@@ -29,7 +32,29 @@ export default function ListingCard({
   onViewDetails,
   onContact,
 }: ListingCardProps) {
-  const imgUrl = getListingImage(listing.id);
+  const storageClient = useStorageClient();
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [imgLoading, setImgLoading] = useState(listing.imageHashes.length > 0);
+
+  useEffect(() => {
+    if (listing.imageHashes.length > 0 && storageClient) {
+      setImgLoading(true);
+      storageClient
+        .getDirectURL(listing.imageHashes[0])
+        .then((url) => {
+          setImgUrl(url);
+          setImgLoading(false);
+        })
+        .catch(() => {
+          setImgUrl(null);
+          setImgLoading(false);
+        });
+    } else {
+      setImgLoading(false);
+    }
+  }, [listing.imageHashes, storageClient]);
+
+  const displayImg = imgUrl ?? getListingImage(listing.id);
 
   return (
     <div
@@ -37,13 +62,17 @@ export default function ListingCard({
       data-ocid={`listing.item.${index + 1}`}
     >
       {/* Image */}
-      <div className="relative h-48 overflow-hidden">
-        <img
-          src={imgUrl}
-          alt={listing.title}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
+      <div className="relative h-48 overflow-hidden bg-muted">
+        {imgLoading ? (
+          <Skeleton className="w-full h-full rounded-none" />
+        ) : (
+          <img
+            src={displayImg}
+            alt={listing.title}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+        )}
         <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs">
           Available
         </Badge>
