@@ -23,6 +23,7 @@ export interface FlatListing {
   'bathrooms' : bigint,
   'location' : string,
   'contactPhone' : string,
+  'imageHashes' : Array<string>,
 }
 export interface FlatListingInput {
   'title' : string,
@@ -34,6 +35,7 @@ export interface FlatListingInput {
   'bathrooms' : bigint,
   'location' : string,
   'contactPhone' : string,
+  'imageHashes' : Array<string>,
 }
 export interface MarkUnavailableInput {
   'listingId' : bigint,
@@ -47,6 +49,7 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'deleteListing' : ActorMethod<[bigint], undefined>,
+  'getAllListings' : ActorMethod<[], Array<FlatListing>>,
   'getAvailableListings' : ActorMethod<[], Array<FlatListing>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -56,6 +59,8 @@ export interface _SERVICE {
   'markListingUnavailable' : ActorMethod<[MarkUnavailableInput], undefined>,
   'postListing' : ActorMethod<[FlatListingInput], bigint>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'toggleListingAvailability' : ActorMethod<[bigint], undefined>,
+  'updateListing' : ActorMethod<[bigint, FlatListingInput], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

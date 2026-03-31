@@ -26,6 +26,7 @@ export const FlatListing = IDL.Record({
   'bathrooms' : IDL.Nat,
   'location' : IDL.Text,
   'contactPhone' : IDL.Text,
+  'imageHashes' : IDL.Vec(IDL.Text),
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const MarkUnavailableInput = IDL.Record({
@@ -42,12 +43,14 @@ export const FlatListingInput = IDL.Record({
   'bathrooms' : IDL.Nat,
   'location' : IDL.Text,
   'contactPhone' : IDL.Text,
+  'imageHashes' : IDL.Vec(IDL.Text),
 });
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'deleteListing' : IDL.Func([IDL.Nat], [], []),
+  'getAllListings' : IDL.Func([], [IDL.Vec(FlatListing)], ['query']),
   'getAvailableListings' : IDL.Func([], [IDL.Vec(FlatListing)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -61,6 +64,8 @@ export const idlService = IDL.Service({
   'markListingUnavailable' : IDL.Func([MarkUnavailableInput], [], []),
   'postListing' : IDL.Func([FlatListingInput], [IDL.Nat], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'toggleListingAvailability' : IDL.Func([IDL.Nat], [], []),
+  'updateListing' : IDL.Func([IDL.Nat, FlatListingInput], [], []),
 });
 
 export const idlInitArgs = [];
@@ -84,6 +89,7 @@ export const idlFactory = ({ IDL }) => {
     'bathrooms' : IDL.Nat,
     'location' : IDL.Text,
     'contactPhone' : IDL.Text,
+    'imageHashes' : IDL.Vec(IDL.Text),
   });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const MarkUnavailableInput = IDL.Record({
@@ -100,12 +106,14 @@ export const idlFactory = ({ IDL }) => {
     'bathrooms' : IDL.Nat,
     'location' : IDL.Text,
     'contactPhone' : IDL.Text,
+    'imageHashes' : IDL.Vec(IDL.Text),
   });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'deleteListing' : IDL.Func([IDL.Nat], [], []),
+    'getAllListings' : IDL.Func([], [IDL.Vec(FlatListing)], ['query']),
     'getAvailableListings' : IDL.Func([], [IDL.Vec(FlatListing)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -119,6 +127,8 @@ export const idlFactory = ({ IDL }) => {
     'markListingUnavailable' : IDL.Func([MarkUnavailableInput], [], []),
     'postListing' : IDL.Func([FlatListingInput], [IDL.Nat], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'toggleListingAvailability' : IDL.Func([IDL.Nat], [], []),
+    'updateListing' : IDL.Func([IDL.Nat, FlatListingInput], [], []),
   });
 };
 
